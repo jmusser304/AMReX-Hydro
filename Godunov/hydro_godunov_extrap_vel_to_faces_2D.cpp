@@ -131,9 +131,13 @@ Godunov::ComputeAdvectiveVel ( Box const& xbx,
         auto bc = pbc[n];
         GodunovTransBC::SetTransTermXBCs(i, j, k, n, vel, lo, hi, bc.lo(0), bc.hi(0), dlo.x, dhi.x, true);
 
-        Real st = ( (lo+hi) >= 0.) ? lo : hi;
-        bool ltm = ( (lo <= 0. && hi >= 0.) || (amrex::Math::abs(lo+hi) < small_vel) );
-        u_ad(i,j,k) = ltm ? 0. : st;
+        if ( (lo+hi) >= 0.)
+          u_ad(i,j,k) = lo;
+        else
+          u_ad(i,j,k) = hi;
+
+        if ( (lo <= 0. && hi >= 0.) || (amrex::Math::abs(lo+hi) < small_vel) )
+          u_ad(i,j,k) = 0.;
     },
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
@@ -152,9 +156,13 @@ Godunov::ComputeAdvectiveVel ( Box const& xbx,
         auto bc = pbc[n];
         GodunovTransBC::SetTransTermYBCs(i, j, k, n, vel, lo, hi, bc.lo(1), bc.hi(1), dlo.y, dhi.y, true);
 
-        Real st = ( (lo+hi) >= 0.) ? lo : hi;
-        bool ltm = ( (lo <= 0. && hi >= 0.) || (amrex::Math::abs(lo+hi) < small_vel) );
-        v_ad(i,j,k) = ltm ? 0. : st;
+        if ( (lo+hi) >= 0.)
+          v_ad(i,j,k) = lo;
+        else
+          v_ad(i,j,k) = hi;
+
+        if ( (lo <= 0. && hi >= 0.) || (amrex::Math::abs(lo+hi) < small_vel) )
+          v_ad(i,j,k) = 0.;
     }
     );
 }
@@ -219,8 +227,16 @@ Godunov::ExtrapVelToFacesOnBox (Box const& bx, int ncomp,
         xlo(i,j,k,n) = lo;
         xhi(i,j,k,n) = hi;
 
-        Real st = (uad >= 0.) ? lo : hi;
-        Real fu = (amrex::Math::abs(uad) < small_vel) ? 0.0 : 1.0;
+        Real st;
+        if (uad >= 0.)
+          st = lo;
+        else
+          st = hi;
+        Real fu;
+        if (amrex::Math::abs(uad) < small_vel)
+          fu = 0.0;
+        else
+          fu = 1.0;
         Imx(i, j, k, n) = fu*st + (1.0 - fu) *0.5 * (hi + lo); // store xedge
     },
     yebox, ncomp, [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
@@ -242,8 +258,14 @@ Godunov::ExtrapVelToFacesOnBox (Box const& bx, int ncomp,
         ylo(i,j,k,n) = lo;
         yhi(i,j,k,n) = hi;
 
-        Real st = (vad >= 0.) ? lo : hi;
-        Real fu = (amrex::Math::abs(vad) < small_vel) ? 0.0 : 1.0;
+        Real st;
+        if (vad >= 0.)
+          st = lo;
+        else
+          st = hi;
+        Real fu(1.0);
+        if (amrex::Math::abs(vad) < small_vel)
+          fu = 0.0;
         Imy(i, j, k, n) = fu*st + (1.0 - fu)*0.5*(hi + lo); // store yedge
     }
     );
@@ -272,8 +294,14 @@ Godunov::ExtrapVelToFacesOnBox (Box const& bx, int ncomp,
         Real vad = v_ad(i,j,k);
         GodunovTransBC::SetTransTermYBCs(i, j, k, n, q, l_yzlo, l_yzhi, bc.lo(1), bc.hi(1), dlo.y, dhi.y, true);
 
-        Real st = (vad >= 0.) ? l_yzlo : l_yzhi;
-        Real fu = (amrex::Math::abs(vad) < small_vel) ? 0.0 : 1.0;
+        Real st;
+        if (vad >= 0.)
+          st = l_yzlo;
+        else
+          st = l_yzhi;
+        Real fu(1.0);
+        if (amrex::Math::abs(vad) < small_vel)
+          fu = 0.0;
         yzlo(i,j,k) = fu*st + (1.0 - fu) * 0.5 * (l_yzhi + l_yzlo);
     });
 
@@ -305,9 +333,13 @@ Godunov::ExtrapVelToFacesOnBox (Box const& bx, int ncomp,
              sth = stl;
         }
 
-        Real st = ( (stl+sth) >= 0.) ? stl : sth;
-        bool ltm = ( (stl <= 0. && sth >= 0.) || (amrex::Math::abs(stl+sth) < small_vel) );
-        qx(i,j,k) = ltm ? 0. : st;
+        if ( (stl+sth) >= 0.)
+          qx(i,j,k) = stl;
+        else
+          qx(i,j,k) = sth;
+
+        if ( (stl <= 0. && sth >= 0.) || (amrex::Math::abs(stl+sth) < small_vel) )
+          qx(i,j,k) = 0.;
     });
 
     //
@@ -329,8 +361,14 @@ Godunov::ExtrapVelToFacesOnBox (Box const& bx, int ncomp,
         GodunovTransBC::SetTransTermXBCs(i, j, k, n, q, l_xzlo, l_xzhi, bc.lo(0), bc.hi(0), dlo.x, dhi.x, true);
 
 
-        Real st = (uad >= 0.) ? l_xzlo : l_xzhi;
-        Real fu = (amrex::Math::abs(uad) < small_vel) ? 0.0 : 1.0;
+        Real st;
+        if (uad >= 0.)
+          st = l_xzlo;
+        else
+          st = l_xzhi;
+        Real fu(1.0);
+        if (amrex::Math::abs(uad) < small_vel)
+          fu = 0.0;
         xzlo(i,j,k) = fu*st + (1.0 - fu) * 0.5 * (l_xzhi + l_xzlo);
     });
 
@@ -364,9 +402,13 @@ Godunov::ExtrapVelToFacesOnBox (Box const& bx, int ncomp,
             sth = stl;
         }
 
-        Real st = ( (stl+sth) >= 0.) ? stl : sth;
-        bool ltm = ( (stl <= 0. && sth >= 0.) || (amrex::Math::abs(stl+sth) < small_vel) );
-        qy(i,j,k) = ltm ? 0. : st;
+        if ( (stl+sth) >= 0.)
+          qy(i,j,k) = stl;
+        else
+          qy(i,j,k) = sth;
+
+        if ( (stl <= 0. && sth >= 0.) || (amrex::Math::abs(stl+sth) < small_vel) )
+          qy(i,j,k) = 0.;
     });
 }
 /** @} */

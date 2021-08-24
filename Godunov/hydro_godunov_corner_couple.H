@@ -35,13 +35,15 @@ void AddCornerCoupleTermYX ( amrex::Real& lo1, amrex::Real& hi1,
     lo1 += - dt/(3.*dx)*( state(i+1,j-1,k,n)*mac(i+1,j-1,k)
                          -state(i  ,j-1,k,n)*mac(i  ,j-1,k) )
            + dt/(3.*dx)*s(i,j-1,k,n)*(mac(i+1,j-1,k)-mac(i,j-1,k));
-        hi1 += - dt/(3.*dx)*( state(i+1,j  ,k,n)*mac(i+1,j  ,k)
-                             -state(i  ,j  ,k,n)*mac(i  ,j  ,k) )
-           + dt/(3.*dx)*s(i,j  ,k,n)*(mac(i+1,j  ,k) - mac(i,j  ,k));
+    hi1 += - dt/(3.*dx)*( state(i+1,j  ,k,n)*mac(i+1,j  ,k)
+                         -state(i  ,j  ,k,n)*mac(i  ,j  ,k) )
+       + dt/(3.*dx)*s(i,j  ,k,n)*(mac(i+1,j  ,k) - mac(i,j  ,k));
 
     // Here we add  - dt/3 ( q divu ) if conservative
-    lo1 += (iconserv) ? - dt/(3.) * s(i,j-1,k,n)*divu_cc(i,j-1,k) : 0.;
-    hi1 += (iconserv) ? - dt/(3.) * s(i,j  ,k,n)*divu_cc(i,j  ,k) : 0.;
+    if (iconserv) {
+      lo1 += - dt/(3.) * s(i,j-1,k,n)*divu_cc(i,j-1,k);
+      hi1 += - dt/(3.) * s(i,j  ,k,n)*divu_cc(i,j  ,k);
+    }
 }
 
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
@@ -68,8 +70,10 @@ void AddCornerCoupleTermZX ( amrex::Real& lo1, amrex::Real& hi1,
            + dt/(3.*dx)*s(i,j,k  ,n)*(mac(i+1,j,k  ) - mac(i,j,k  ));
 
     // Here we add  - dt/3 ( q divu ) if conservative
-    lo1 += (iconserv) ? - dt/(3.) * s(i,j,k-1,n)*divu_cc(i,j,k-1) : 0.;
-    hi1 += (iconserv) ? - dt/(3.) * s(i,j,k  ,n)*divu_cc(i,j,k  ) : 0.;
+    if (iconserv) {
+      lo1 += - dt/(3.) * s(i,j,k-1,n)*divu_cc(i,j,k-1);
+      hi1 += - dt/(3.) * s(i,j,k  ,n)*divu_cc(i,j,k  );
+    }
 }
 
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
@@ -95,8 +99,10 @@ void AddCornerCoupleTermXY ( amrex::Real& lo1, amrex::Real& hi1,
            + dt/(3.*dy)*s(i,j,k,n)*(mac(i,j+1,k)-mac(i,j,k));
 
     // Here we add  - dt/3 ( q divu ) if conservative
-    lo1 += (iconserv) ? - dt/(3.) * s(i-1,j,k,n)*divu_cc(i-1,j,k) : 0.;
-    hi1 += (iconserv) ? - dt/(3.) * s(i  ,j,k,n)*divu_cc(i  ,j,k) : 0.;
+    if (iconserv) {
+      lo1 += - dt/(3.) * s(i-1,j,k,n)*divu_cc(i-1,j,k);
+      hi1 += - dt/(3.) * s(i  ,j,k,n)*divu_cc(i  ,j,k);
+    }
 }
 
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
@@ -122,8 +128,10 @@ void AddCornerCoupleTermZY ( amrex::Real& lo1, amrex::Real& hi1,
            + dt/(3.*dy)*s(i,j,k,n)*(mac(i,j+1,k) - mac(i,j,k));
 
     // Here we add  - dt/3 ( q divu ) if conservative
-    lo1 += (iconserv) ? - dt/(3.) * s(i,j,k-1,n)*divu_cc(i,j,k-1) : 0.;
-    hi1 += (iconserv) ? - dt/(3.) * s(i,j,k  ,n)*divu_cc(i,j,k  ) : 0.;
+    if (iconserv) {
+      lo1 += - dt/(3.) * s(i,j,k-1,n)*divu_cc(i,j,k-1);
+      hi1 += - dt/(3.) * s(i,j,k  ,n)*divu_cc(i,j,k  );
+    }
 }
 
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
@@ -149,8 +157,10 @@ void AddCornerCoupleTermXZ ( amrex::Real& lo1, amrex::Real& hi1,
            + dt/(3.*dz)*s(i,j,k,n)*(mac(i,j,k+1) - mac(i,j,k));
 
     // Here we add  - dt/3 ( q divu ) if conservative
-    lo1 += (iconserv) ? - dt/(3.) * s(i-1,j,k,n)*divu_cc(i-1,j,k) : 0.;
-    hi1 += (iconserv) ? - dt/(3.) * s(i  ,j,k,n)*divu_cc(i  ,j,k) : 0.;
+    if (iconserv) {
+      lo1 += - dt/(3.) * s(i-1,j,k,n)*divu_cc(i-1,j,k);
+      hi1 += - dt/(3.) * s(i  ,j,k,n)*divu_cc(i  ,j,k);
+    }
 }
 
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
@@ -176,8 +186,10 @@ void AddCornerCoupleTermYZ ( amrex::Real& lo1, amrex::Real& hi1,
            + dt/(3.*dz)*s(i,j,k,n)*(mac(i,j,k+1) - mac(i,j,k));
 
     // Here we add  - dt/3 ( q divu ) if conservative
-    lo1 += (iconserv) ? - dt/(3.) * s(i,j-1,k,n)*divu_cc(i,j-1,k) : 0.;
-    hi1 += (iconserv) ? - dt/(3.) * s(i,j  ,k,n)*divu_cc(i,j  ,k) : 0.;
+    if (iconserv) {
+      lo1 += - dt/(3.) * s(i,j-1,k,n)*divu_cc(i,j-1,k);
+      hi1 += - dt/(3.) * s(i,j  ,k,n)*divu_cc(i,j  ,k);
+    }
 }
 }
 #endif

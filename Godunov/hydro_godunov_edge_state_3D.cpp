@@ -131,7 +131,11 @@ Godunov::ComputeEdgeState (Box const& bx, int ncomp,
     xebox, ncomp, [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
     {
         Real uad = umac(i,j,k);
-        Real fux = (amrex::Math::abs(uad) < small_vel)? 0. : 1.;
+        Real fux;
+        if (amrex::Math::abs(uad) < small_vel)
+          fux = 0.;
+        else
+          fux = 1.;
         bool uval = uad >= 0.;
         Real lo = Ipx(i-1,j,k,n);
         Real hi = Imx(i  ,j,k,n);
@@ -147,14 +151,22 @@ Godunov::ComputeEdgeState (Box const& bx, int ncomp,
         GodunovTransBC::SetTransTermXBCs(i, j, k, n, q, lo, hi, bc.lo(0), bc.hi(0), dlo.x, dhi.x, is_velocity);
         xlo(i,j,k,n) = lo;
         xhi(i,j,k,n) = hi;
-        Real st = (uval) ? lo : hi;
+        Real st;
+        if (uval)
+          st = lo;
+        else
+          st = hi;
         Imx(i,j,k,n) = fux*st + (1. - fux)*0.5*(hi + lo);
 
     },
     yebox, ncomp, [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
     {
         Real vad = vmac(i,j,k);
-        Real fuy = (amrex::Math::abs(vad) < small_vel)? 0. : 1.;
+        Real fuy;
+        if (amrex::Math::abs(vad) < small_vel)
+          fuy = 0.;
+        else
+          fuy = 1.;
         bool vval = vad >= 0.;
         Real lo = Ipy(i,j-1,k,n);
         Real hi = Imy(i,j  ,k,n);
@@ -171,13 +183,21 @@ Godunov::ComputeEdgeState (Box const& bx, int ncomp,
 
         ylo(i,j,k,n) = lo;
         yhi(i,j,k,n) = hi;
-        Real st = (vval) ? lo : hi;
+        Real st;
+        if (vval)
+          st = lo;
+        else
+          st = hi;
         Imy(i,j,k,n) = fuy*st + (1. - fuy)*0.5*(hi + lo);
     },
     zebox, ncomp, [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
     {
         Real wad = wmac(i,j,k);
-        Real fuz = (amrex::Math::abs(wad) < small_vel) ? 0. : 1.;
+        Real fuz;
+        if (amrex::Math::abs(wad) < small_vel)
+          fuz = 0.;
+        else
+          fuz = 1.;
         bool wval = wad >= 0.;
         Real lo = Ipz(i,j,k-1,n);
         Real hi = Imz(i,j,k  ,n);
@@ -194,7 +214,11 @@ Godunov::ComputeEdgeState (Box const& bx, int ncomp,
 
         zlo(i,j,k,n) = lo;
         zhi(i,j,k,n) = hi;
-        Real st = (wval) ? lo : hi;
+        Real st;
+        if (wval)
+          st = lo;
+        else
+          st = hi;
         Imz(i,j,k,n) = fuz*st + (1. - fuz)*0.5*(hi + lo);
     }
     );
@@ -221,8 +245,16 @@ Godunov::ComputeEdgeState (Box const& bx, int ncomp,
         Real wad = wmac(i,j,k);
         GodunovTransBC::SetTransTermZBCs(i, j, k, n, q, l_zylo, l_zyhi, bc.lo(2), bc.hi(2), dlo.z, dhi.z, is_velocity);
 
-        Real st = (wad >= 0.) ? l_zylo : l_zyhi;
-        Real fu = (amrex::Math::abs(wad) < small_vel) ? 0.0 : 1.0;
+        Real st;
+        if (wad >= 0.)
+          st = l_zylo;
+        else
+          st = l_zyhi;
+        Real fu;
+        if (amrex::Math::abs(wad) < small_vel)
+          fu = 0.0;
+        else
+          fu = 1.0;
         zylo(i,j,k,n) = fu*st + (1.0 - fu) * 0.5 * (l_zyhi + l_zylo);
     },
     Box(yzlo), ncomp,
@@ -238,8 +270,16 @@ Godunov::ComputeEdgeState (Box const& bx, int ncomp,
         Real vad = vmac(i,j,k);
         GodunovTransBC::SetTransTermYBCs(i, j, k, n, q, l_yzlo, l_yzhi, bc.lo(1), bc.hi(1), dlo.y, dhi.y, is_velocity);
 
-        Real st = (vad >= 0.) ? l_yzlo : l_yzhi;
-        Real fu = (amrex::Math::abs(vad) < small_vel) ? 0.0 : 1.0;
+        Real st;
+        if (vad >= 0.)
+          st = l_yzlo;
+        else
+          st = l_yzhi;
+        Real fu;
+        if (amrex::Math::abs(vad) < small_vel)
+          fu = 0.0;
+        else
+          fu = 1.0;
         yzlo(i,j,k,n) = fu*st + (1.0 - fu) * 0.5 * (l_yzhi + l_yzlo);
     });
 
@@ -266,9 +306,11 @@ Godunov::ComputeEdgeState (Box const& bx, int ncomp,
 	// Here we adjust for non-conservative by removing the q divu contribution to get
 	//     q + dx/2 q_x - dt/2 ( div (uvec q) - q divu ) which is equivalent to
 	// --> q + dx/2 q_x - dt/2 ( uvec dot grad q)
-	stl += (!iconserv[n])               ? 0.5*l_dt* q(i-1,j,k,n)*divu(i-1,j,k) : 0.;
+	if(!iconserv[n])
+    stl += 0.5*l_dt* q(i-1,j,k,n)*divu(i-1,j,k);
 
-	stl += (!use_forces_in_trans && fq) ? 0.5*l_dt*fq(i-1,j,k,n) : 0.;
+  if (!use_forces_in_trans && fq)
+      stl += 0.5*l_dt*fq(i-1,j,k,n);
 
 	// High side
 	Real quxh = (umac(i+1,j,k) - umac(i,j,k)) * q(i,j,k,n);
@@ -278,10 +320,11 @@ Godunov::ComputeEdgeState (Box const& bx, int ncomp,
 		 - (0.5*dtdz)*(zylo(i,j  ,k+1,n)*wmac(i,j  ,k+1)
 	                     - zylo(i,j  ,k  ,n)*wmac(i,j  ,k  )) );
 
-	sth += (!iconserv[n])               ? 0.5*l_dt* q(i  ,j,k,n)*divu(i,j,k) : 0.;
+	if (!iconserv[n])
+    sth += 0.5*l_dt* q(i  ,j,k,n)*divu(i,j,k);
 
-	sth += (!use_forces_in_trans && fq) ? 0.5*l_dt*fq(i  ,j,k,n) : 0.;
-
+	if (!use_forces_in_trans && fq)
+    sth += 0.5*l_dt*fq(i  ,j,k,n);
 
 	auto bc = pbc[n];
 	HydroBC::SetXEdgeBCs(i, j, k, n, q, stl, sth, bc.lo(0), dlo.x, bc.hi(0), dhi.x, is_velocity);
@@ -297,8 +340,15 @@ Godunov::ComputeEdgeState (Box const& bx, int ncomp,
              sth = stl;
         }
 
-        Real temp = (umac(i,j,k) >= 0.) ? stl : sth;
-        temp = (amrex::Math::abs(umac(i,j,k)) < small_vel) ? 0.5*(stl + sth) : temp;
+        Real temp;
+        if (umac(i,j,k) >= 0.)
+          temp = stl;
+        else
+          temp = sth;
+        if (amrex::Math::abs(umac(i,j,k)) < small_vel)
+          temp = 0.5*(stl + sth);
+        else
+          temp = temp;
         xedge(i,j,k,n) = temp;
     });
 
@@ -322,8 +372,16 @@ Godunov::ComputeEdgeState (Box const& bx, int ncomp,
         Real uad = umac(i,j,k);
         GodunovTransBC::SetTransTermXBCs(i, j, k, n, q, l_xzlo, l_xzhi, bc.lo(0), bc.hi(0), dlo.x, dhi.x, is_velocity);
 
-        Real st = (uad >= 0.) ? l_xzlo : l_xzhi;
-        Real fu = (amrex::Math::abs(uad) < small_vel) ? 0.0 : 1.0;
+        Real st;
+        if (uad >= 0.)
+          st = l_xzlo;
+        else
+          st = l_xzhi;
+        Real fu;
+        if (amrex::Math::abs(uad) < small_vel)
+          fu = 0.0;
+        else
+          fu = 1.0;
         xzlo(i,j,k,n) = fu*st + (1.0 - fu) * 0.5 * (l_xzhi + l_xzlo);
     },
     Box(zxlo), ncomp,
@@ -339,8 +397,16 @@ Godunov::ComputeEdgeState (Box const& bx, int ncomp,
         Real wad = wmac(i,j,k);
         GodunovTransBC::SetTransTermZBCs(i, j, k, n, q, l_zxlo, l_zxhi, bc.lo(2), bc.hi(2), dlo.z, dhi.z, is_velocity);
 
-        Real st = (wad >= 0.) ? l_zxlo : l_zxhi;
-        Real fu = (amrex::Math::abs(wad) < small_vel) ? 0.0 : 1.0;
+        Real st;
+        if (wad >= 0.)
+          st = l_zxlo;
+        else
+          st = l_zxhi;
+        Real fu;
+        if (amrex::Math::abs(wad) < small_vel)
+          fu = 0.0;
+        else
+          fu = 1.0;
         zxlo(i,j,k,n) = fu*st + (1.0 - fu) * 0.5 * (l_zxhi + l_zxlo);
     });
 
@@ -365,9 +431,11 @@ Godunov::ComputeEdgeState (Box const& bx, int ncomp,
 	// Here we adjust for non-conservative by removing the q divu contribution to get
 	//     q + dy/2 q_y - dt/2 ( div (uvec q) - q divu ) which is equivalent to
 	// --> q + dy/2 q_y - dt/2 ( uvec dot grad q)
-	stl += (!iconserv[n]) ? 0.5*l_dt* q(i,j-1,k,n)*divu(i,j-1,k) : 0.;
+	if (!iconserv[n])
+    stl += 0.5*l_dt* q(i,j-1,k,n)*divu(i,j-1,k);
 
-	stl += (!use_forces_in_trans && fq)           ? 0.5*l_dt*fq(i,j-1,k,n) : 0.;
+  if (!use_forces_in_trans && fq)
+    stl += 0.5*l_dt*fq(i,j-1,k,n);
 
 	// High side
 	Real qvyh = (vmac(i,j+1,k) - vmac(i,j,k)) * q(i,j,k,n);
@@ -377,9 +445,11 @@ Godunov::ComputeEdgeState (Box const& bx, int ncomp,
 		 - (0.5*dtdz)*(zxlo(i  ,j,k+1,n)*wmac(i  ,j,k+1)
 		             - zxlo(i  ,j,k  ,n)*wmac(i  ,j,k  )) );
 
-	sth += (!iconserv[n])               ? 0.5*l_dt* q(i,j,k,n)*divu(i,j,k) : 0.;
+	if (!iconserv[n])
+    sth +=  0.5*l_dt* q(i,j,k,n)*divu(i,j,k);
 
-	sth += (!use_forces_in_trans && fq) ? 0.5*l_dt*fq(i,j,k,n) : 0.;
+	if (!use_forces_in_trans && fq)
+    sth +=  0.5*l_dt*fq(i,j,k,n);
 
 
         auto bc = pbc[n];
@@ -396,8 +466,15 @@ Godunov::ComputeEdgeState (Box const& bx, int ncomp,
             sth = stl;
         }
 
-        Real temp = (vmac(i,j,k) >= 0.) ? stl : sth;
-        temp = (amrex::Math::abs(vmac(i,j,k)) < small_vel) ? 0.5*(stl + sth) : temp;
+        Real temp;
+        if (vmac(i,j,k) >= 0.)
+          temp = stl;
+        else
+          temp = sth;
+        if (amrex::Math::abs(vmac(i,j,k)) < small_vel)
+          temp = 0.5*(stl + sth);
+        else
+            temp = temp;
         yedge(i,j,k,n) = temp;
     });
 
@@ -421,8 +498,16 @@ Godunov::ComputeEdgeState (Box const& bx, int ncomp,
         Real uad = umac(i,j,k);
         GodunovTransBC::SetTransTermXBCs(i, j, k, n, q, l_xylo, l_xyhi, bc.lo(0), bc.hi(0), dlo.x, dhi.x, is_velocity);
 
-        Real st = (uad >= 0.) ? l_xylo : l_xyhi;
-        Real fu = (amrex::Math::abs(uad) < small_vel) ? 0.0 : 1.0;
+        Real st;
+        if (uad >= 0.)
+          st = l_xylo;
+        else
+          st = l_xyhi;
+        Real fu;
+        if (amrex::Math::abs(uad) < small_vel)
+          fu = 0.0;
+        else
+          fu = 1.0;
         xylo(i,j,k,n) = fu*st + (1.0 - fu) * 0.5 * (l_xyhi + l_xylo);
     },
     Box(yxlo), ncomp,
@@ -438,8 +523,16 @@ Godunov::ComputeEdgeState (Box const& bx, int ncomp,
         Real vad = vmac(i,j,k);
         GodunovTransBC::SetTransTermYBCs(i, j, k, n, q, l_yxlo, l_yxhi, bc.lo(1), bc.hi(1), dlo.y, dhi.y, is_velocity);
 
-        Real st = (vad >= 0.) ? l_yxlo : l_yxhi;
-        Real fu = (amrex::Math::abs(vad) < small_vel) ? 0.0 : 1.0;
+        Real st;
+        if (vad >= 0.)
+          st = l_yxlo;
+        else
+          st = l_yxhi;
+        Real fu;
+        if (amrex::Math::abs(vad) < small_vel)
+          fu = 0.0;
+        else
+          fu = 1.0;
         yxlo(i,j,k,n) = fu*st + (1.0 - fu) * 0.5 * (l_yxhi + l_yxlo);
     });
     //
@@ -464,9 +557,11 @@ Godunov::ComputeEdgeState (Box const& bx, int ncomp,
 	// Here we adjust for non-conservative by removing the q divu contribution to get
 	//     q + dz/2 q_z - dt/2 ( div (uvec q) - q divu ) which is equivalent to
 	// --> q + dz/2 q_z - dt/2 ( uvec dot grad q)
-	stl += (!iconserv[n])               ? 0.5*l_dt* q(i,j,k-1,n)*divu(i,j,k-1) : 0.;
+	if (!iconserv[n])
+    stl +=  0.5*l_dt* q(i,j,k-1,n)*divu(i,j,k-1) ;
 
-	stl += (!use_forces_in_trans && fq) ? 0.5*l_dt*fq(i,j,k-1,n) : 0.;
+	if (!use_forces_in_trans && fq)
+    stl +=  0.5*l_dt*fq(i,j,k-1,n);
 
 	// High side
 	Real qwzh = (wmac(i,j,k+1) - wmac(i,j,k)) * q(i,j,k,n);
@@ -476,10 +571,11 @@ Godunov::ComputeEdgeState (Box const& bx, int ncomp,
 		 - (0.5*dtdy)*(yxlo(i  ,j+1,k,n)*vmac(i  ,j+1,k)
 			      -yxlo(i  ,j  ,k,n)*vmac(i  ,j  ,k)) );
 
-	sth += (!iconserv[n])               ? 0.5*l_dt* q(i,j,k,n)*divu(i,j,k) : 0.;
+	if (!iconserv[n])
+    sth += 0.5*l_dt* q(i,j,k,n)*divu(i,j,k);
 
-	sth += (!use_forces_in_trans && fq) ? 0.5*l_dt*fq(i,j,k,n) : 0.;
-
+	if (!use_forces_in_trans && fq)
+    sth +=  0.5*l_dt*fq(i,j,k,n);
 
 
         auto bc = pbc[n];
@@ -496,8 +592,15 @@ Godunov::ComputeEdgeState (Box const& bx, int ncomp,
             sth = stl;
         }
 
-        Real temp = (wmac(i,j,k) >= 0.) ? stl : sth;
-        temp = (amrex::Math::abs(wmac(i,j,k)) < small_vel) ? 0.5*(stl + sth) : temp;
+        Real temp;
+        if (wmac(i,j,k) >= 0.)
+          temp = stl;
+        else
+          temp = sth;
+        if (amrex::Math::abs(wmac(i,j,k)) < small_vel)
+          temp = 0.5*(stl + sth);
+        else
+          temp = temp;
         zedge(i,j,k,n) = temp;
     });
 

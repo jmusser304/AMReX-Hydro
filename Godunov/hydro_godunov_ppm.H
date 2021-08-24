@@ -21,8 +21,10 @@ amrex::Real vanLeer(const amrex::Real a, const amrex::Real b, const amrex::Real 
     amrex::Real dsc = 0.5e0*(b - c);
     amrex::Real dsl = 2.e0*(a - c);
     amrex::Real dsr = 2.e0*(b - a);
-    return (dsl*dsr > small_qty_sq) ?
-        std::copysign(1., dsc)*amrex::min(amrex::Math::abs(dsc),amrex::min(amrex::Math::abs(dsl), amrex::Math::abs(dsr))) : 0.;
+    if (dsl*dsr > small_qty_sq)
+      return std::copysign(1., dsc)*amrex::min(amrex::Math::abs(dsc),amrex::min(amrex::Math::abs(dsl), amrex::Math::abs(dsr)));
+    else
+      return 0.;
 }
 }
 
